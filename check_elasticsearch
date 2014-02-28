@@ -226,16 +226,17 @@ class ElasticSearchCheck(NagiosCheck):
         indices = es_state['metadata']['indices']
         for i in indices:
             idx_stns = indices[i]['settings']
-            if api == 1:
-                idx = ESIndex(i,
-                              int(idx_stns['index']['number_of_shards']),
-                              int(idx_stns['index']['number_of_replicas']))
-            elif api == 0:
-                idx = ESIndex(i,
-                              int(idx_stns['index.number_of_shards']),
-                              int(idx_stns['index.number_of_replicas']))
+            if indices[i]['state'] == 'open':
+                if api == 1:
+                    idx = ESIndex(i,
+                                  int(idx_stns['index']['number_of_shards']),
+                                  int(idx_stns['index']['number_of_replicas']))
+                elif api == 0:
+                    idx = ESIndex(i,
+                                  int(idx_stns['index.number_of_shards']),
+                                  int(idx_stns['index.number_of_replicas']))
 
-            name_index_map[i] = idx
+                name_index_map[i] = idx
 
         # Build shard maps:
         #
