@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from nagioscheck import NagiosCheck, UsageError
 from nagioscheck import PerformanceMetric, Status
@@ -76,9 +76,13 @@ class ElasticSearchCheck(NagiosCheck):
                         "The ElasticSearch API should be listening "
                         "here.  Defaults to 9200.")
 
+        self.add_option('a', 'api', 'api', "API version  "
+                        "The ElasticSearch here.  Defaults to 1.")
+
     def check(self, opts, args):
         host = opts.host or "localhost"
         port = int(opts.port or '9200')
+        api = int(opts.api or '1')
 
         failure_domain = []
         if (isinstance(opts.failure_domain, str) and
@@ -119,7 +123,12 @@ class ElasticSearchCheck(NagiosCheck):
         # Request a bunch of useful numbers that we export as perfdata.  
         # Details like the number of get, search, and indexing 
         # operations come from here.
-        es_stats = get_json(r'http://%s:%d/_nodes/stats' % (host, port))
+        if api == 1:
+            es_stats = get_json(r'http://%s:%d/_nodes/stats' % (host, port))
+        elif api == 0:
+            es_stats = get_json(r'http://%s:%d/_cluster/nodes/_local/'
+                                 'stats?all=true' % (host, port))
+
 
         myid = es_stats['nodes'].keys()[0]
 
@@ -217,9 +226,14 @@ class ElasticSearchCheck(NagiosCheck):
         indices = es_state['metadata']['indices']
         for i in indices:
             idx_stns = indices[i]['settings']
-            idx = ESIndex(i,
-                          int(idx_stns['index']['number_of_shards']),
-                          int(idx_stns['index']['number_of_replicas']))
+            if api == 1:
+                idx = ESIndex(i,
+                              int(idx_stns['index']['number_of_shards']),
+                              int(idx_stns['index']['number_of_replicas']))
+            elif api == 0:
+                idx = ESIndex(i,
+                              int(idx_stns['index.number_of_shards']),
+                              int(idx_stns['index.number_of_replicas']))
 
             name_index_map[i] = idx
 
